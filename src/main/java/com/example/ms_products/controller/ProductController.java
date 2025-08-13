@@ -1,48 +1,107 @@
 package com.example.ms_products.controller;
 
+
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.example.ms_products.model.Product;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.ms_products.dto.ProductDTO;
+import com.example.ms_products.dto.ProductStockValidationDTO;
 import com.example.ms_products.service.ProductService;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 
+@Validated
 @RestController
-@RequestMapping("/api/products")
-@RequiredArgsConstructor
+@RequestMapping("/products")
 public class ProductController {
-    private final ProductService productService;
 
-    @PostMapping
-    public ResponseEntity<Product> create(@Valid @RequestBody Product p) {
-        return new ResponseEntity<>(productService.create(p), HttpStatus.CREATED);
+  private final ProductService productService;
+
+  public ProductController(ProductService productService) {
+    this.productService = productService;
+  }
+
+  @GetMapping("")
+  public ResponseEntity<List<ProductDTO>> listAll() {
+    List<ProductDTO> products = productService.listAll();
+
+    if (products.isEmpty()) {
+      return ResponseEntity.noContent().build();
     }
 
-    @GetMapping
-    public ResponseEntity<Page<Product>> list(
-            @RequestParam(defaultValue = "") String name,
-            @PageableDefault(size = 10, page = 0) Pageable pageable) {
-        return ResponseEntity.ok(productService.list(name, pageable));
-    }
+    return ResponseEntity.ok(products);
+  }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Product> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(productService.getById(id));
-    }
+  @GetMapping("/{id}")
+  public ResponseEntity<ProductDTO> getById(@PathVariable @Min(1) Long id) {
+    ProductDTO dto = productService.findById(id);
+    return ResponseEntity.ok(dto);
+  }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Product> update(@PathVariable Long id, @Valid @RequestBody Product p) {
-        return ResponseEntity.ok(productService.update(id, p));
+  @GetMapping("/search")
+  public ResponseEntity<Object> findByName(
+      @RequestParam @NotBlank(message = "El parámetro 'name' es obligatorio") String name,
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @RequestParam(defaultValue = "5") @Min(1) int size) {
+    Page<ProductDTO> result = productService.findByName(name, page, size);
+    if (result.isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(Map.of("message", "No se encontraron resultados para: " + name));
     }
+    return ResponseEntity.ok(result);
+  }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        productService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
+  @PostMapping("")
+  public ResponseEntity<ProductDTO> create(@Valid @RequestBody ProductDTO productDto) {
+    ProductDTO savedDto = productService.create(productDto);
+    return ResponseEntity.status(HttpStatus.CREATED).body(savedDto);
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<ProductDTO> update(@PathVariable Long id, @Valid @RequestBody ProductDTO dto) {
+    ProductDTO updated = productService.update(id, dto);
+    return ResponseEntity.ok(updated);
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> delete(@PathVariable Long id) {
+    productService.deleteById(id);
+    return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/{id}/validate")
+  public ResponseEntity<ProductStockValidationDTO> validateStock(
+      @PathVariable Long id,
+      @RequestParam int quantity) {
+
+    ProductStockValidationDTO response = productService.validateStock(id, quantity);
+    return ResponseEntity.ok(response);
+  }
+
+  @PutMapping("/{id}/decrease-stock")
+  public ResponseEntity<String> decreaseStock(
+      @PathVariable Long id,
+      @RequestParam int quantity) {
+
+    productService.decreaseStock(id, quantity);
+    return ResponseEntity.ok("Stock actualizado correctamente");
+  }
+
 }

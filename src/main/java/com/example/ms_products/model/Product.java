@@ -1,37 +1,30 @@
 package com.example.ms_products.model;
 
-import java.math.BigDecimal;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
+@ToString(of = {"id", "description", "price", "stock", "category"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
-    @NotBlank
-    private String name;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+  private String name;
+  private String description;
+  private Double price;
+  private Integer stock;
+  private String category;
 
-    private String description;
-
-    @NotNull
-    private BigDecimal price;
-
-    @NotNull
-    private Integer stock;
-
-    private String category;
 }
